@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>اختبار قاعدة البيانات</title>
+<style>body{font-family:Tahoma,Arial,sans-serif;padding:16px;line-height:1.7;max-width:640px;margin:auto}button{font:700 18px inherit;padding:14px 22px;border:0;border-radius:12px;background:#ff2d75;color:#fff;width:100%}pre{background:#f3f3f7;padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left}.ok{color:#166534;font-weight:700}.bad{color:#b91c1c;font-weight:700}</style></head>
+<body><h2>🔧 اختبار حفظ الطلبات</h2><p>اضغط الزر، ثم أرسل لي النتيجة التي تظهر.</p>
+<button onclick="go()">اختبار الآن</button><div id="r" style="margin-top:16px"></div>
+<script>
+const SB_URL='https://jklwqpfecfoghmjgwbns.supabase.co',SB_KEY='sb_publishable_-KF3FAB8ZamMc8_TxXgQlQ_cUpeX3p1';
+const r=document.getElementById('r');
+async function go(){r.innerHTML='جاري الاختبار...';
+ try{const x=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({name:'TEST اختبار',phone:'0000000000',wilaya:'-',baladiya:'-',delivery_type:'-',product:'اختبار',qty:1,unit_price:0,delivery_fee:0,total:0})});
+  const t=await x.text();
+  const hint=x.ok?'تم الحفظ بنجاح ✅ افتح لوحة الطلبات وستجد طلب اسمه TEST. احذفه بعد ذلك.':x.status==401||x.status==403?'مشكلة صلاحيات: شغّل أوامر grant في SQL Editor.':x.status==404?'الجدول غير ظاهر للـ API: شغّل السطر notify pgrst في SQL Editor، وتأكد أن الجدول اسمه orders.':x.status==400?'عمود ناقص أو خطأ في الأعمدة: أرسل لي النص أدناه.':'أرسل لي النص أدناه.';
+  r.innerHTML=`<p class="${x.ok?'ok':'bad'}">${hint}</p><p>رمز الحالة: <b>${x.status}</b></p><pre>${t.replace(/</g,'&lt;')||'(فارغ)'}</pre>`}
+ catch(e){r.innerHTML='<p class="bad">تعذّر الاتصال بـ Supabase: تحقق من الإنترنت أو من رابط المشروع.</p><pre>'+e+'</pre>'}}
+</script></body></html>
