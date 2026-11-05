@@ -34,12 +34,12 @@ const H=()=>({apikey:SB_KEY,...(tok?{Authorization:'Bearer '+tok}:{}),'Content-T
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fd=d=>d?new Date(d).toLocaleString('ar-DZ',{dateStyle:'short',timeStyle:'short'}):'';
 function login(msg){app.innerHTML=`<div class="card" style="max-width:360px;margin:60px auto"><h2>🔐 لوحة الطلبات</h2><p class="m">${msg||''}</p>
-<input id="u" type="email" placeholder="اسم المستخدم (البريد)" style="width:100%;margin:8px 0"><input id="pw" type="password" placeholder="كلمة السر" style="width:100%;margin-bottom:8px">
+<input id="u" type="email" autocapitalize="none" autocomplete="username" placeholder="اسم المستخدم (البريد)" style="width:100%;margin:8px 0"><input id="pw" type="password" autocomplete="current-password" placeholder="كلمة السر" style="width:100%;margin-bottom:8px">
 <button class="p" style="width:100%" onclick="doLogin()">دخول</button></div>`}
 async function doLogin(){
  if(!SB_URL){return login('لم يتم ربط قاعدة البيانات بعد.')}
- try{const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:u.value.trim(),password:pw.value})});
-  const j=await r.json();if(!j.access_token)return login('اسم المستخدم أو كلمة السر غير صحيحة');
+ try{const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:u.value.trim().toLowerCase(),password:pw.value})});
+  const j=await r.json();if(!j.access_token)return login('تعذّر الدخول: '+(j.msg||j.error_description||j.message||j.error||'اسم المستخدم أو كلمة السر غير صحيحة'));
   tok=j.access_token;try{sessionStorage.setItem('t',tok)}catch(e){}load()}catch(e){login('تعذّر الاتصال')}}
 async function load(){
  const r=await fetch(SB_URL+'/rest/v1/orders?select=*&order=created_at.desc&limit=2000',{headers:H()});
