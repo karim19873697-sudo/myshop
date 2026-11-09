@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>لوحة الطلبات</title>
+<style>
+:root{--bg:#f4f4f8;--cd:#fff;--tx:#16161d;--mt:#6b6b7a;--br:#e3e3ea;--ac:#ff2d75}
+@media(prefers-color-scheme:dark){:root{--bg:#0f0f14;--cd:#181820;--tx:#f3f3f7;--mt:#a0a0b0;--br:#2a2a35}}
+*{box-sizing:border-box;margin:0}
+body{font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--tx);padding:12px;line-height:1.6}
+.w{max-width:900px;margin:auto}
+input,select,button{font:15px inherit;font-family:inherit;padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--cd);color:var(--tx)}
+button{cursor:pointer;font-weight:700}
+.p{background:var(--ac);color:#fff;border:0}
+.card{background:var(--cd);border:1px solid var(--br);border-radius:14px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.b{font-size:12px;padding:2px 9px;border-radius:20px;font-weight:700;background:var(--br)}
+.new{background:#dbeafe;color:#1d4ed8}.called{background:#fef3c7;color:#92400e}.msg_sent{background:#e0e7ff;color:#3730a3}.no_answer{background:#fee2e2;color:#b91c1c}.confirmed{background:#dcfce7;color:#166534}.canceled{background:#e5e7eb;color:#4b5563}
+.warn{background:#fef3c7;color:#92400e;padding:8px;border-radius:10px;margin:8px 0;font-weight:700;font-size:14px}
+small,.m{color:var(--mt);font-size:13px}
+.tabs button.on{background:var(--ac);color:#fff;border:0}
+a.t{text-decoration:none;display:inline-block;padding:10px;border-radius:10px;background:#16a34a;color:#fff;font-weight:700}
+</style>
+</head>
+<body><div class="w" id="app"></div>
+<script>
+const SB_URL='https://jklwqpfecfoghmjgwbns.supabase.co',SB_KEY='sb_publishable_-KF3FAB8ZamMc8_TxXgQlQ_cUpeX3p1'; // نفس رابط ومفتاح المتجر (Supabase)
+const ST={new:'جديد',msg_sent:'بانتظار رد الزبون',called:'تم الاتصال',no_answer:'لم يرد',confirmed:'مؤكد',canceled:'ملغي'};
+const app=document.getElementById('app');let tok='',O=[],tab='o',flt='all',qs='',DG='';
+try{tok=sessionStorage.getItem('t')||''}catch(e){}
+const H=()=>({apikey:SB_KEY,...(tok?{Authorization:'Bearer '+tok}:{}),'Content-Type':'application/json'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fd=d=>d?new Date(d).toLocaleString('ar-DZ',{dateStyle:'short',timeStyle:'short'}):'';
+function login(msg){app.innerHTML=`<div class="card" style="max-width:360px;margin:60px auto"><h2>🔐 لوحة الطلبات</h2><p class="m">${msg||''}</p>
+<input id="u" type="email" autocapitalize="none" autocomplete="username" placeholder="اسم المستخدم (البريد)" style="width:100%;margin:8px 0"><input id="pw" type="password" autocomplete="current-password" placeholder="كلمة السر" style="width:100%;margin-bottom:8px">
+<button class="p" style="width:100%" onclick="doLogin()">دخول</button></div>`}
+async function doLogin(){
+ if(!SB_URL){return login('لم يتم ربط قاعدة البيانات بعد.')}
+ try{const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:u.value.trim().toLowerCase(),password:pw.value})});
+  const j=await r.json();if(!j.access_token)return login('تعذّر الدخول: '+(j.msg||j.error_description||j.message||j.error||'اسم المستخدم أو كلمة السر غير صحيحة'));
+  tok=j.access_token;try{sessionStorage.setItem('t',tok)}catch(e){}load()}catch(e){login('تعذّر الاتصال')}}
+async function load(){
+ const r=await fetch(SB_URL+'/rest/v1/orders?select=*&order=created_at.desc&limit=2000',{headers:H()});
+ if(!r.ok){tok='';try{sessionStorage.removeItem('t')}catch(e){};return login('انتهت الجلسة، سجّل الدخول من جديد')}
+ O=await r.json();draw()}
+async function upd(id,patch){
+ const r=await fetch(SB_URL+'/rest/v1/orders?id=eq.'+id,{method:'PATCH',headers:{...H(),Prefer:'return=representation'},body:JSON.stringify(patch)});
+ if(!r.ok)return alert('تعذّر الحفظ'+(patch.deleted_at!==undefined?' — نفّذ أمر SQL لإضافة عمود deleted_at أولاً':''));const n=(await r.json())[0];O=O.map(o=>o.id===id?n:o);draw()}
+const byPhone=p=>O.filter(o=>!o.deleted_at&&o.phone===p);
+function act(id,k){const o=O.find(x=>x.id===id),now=new Date().toISOString();
+ if(k==='wa'){const ph='213'+o.phone.replace(/^0/,''),m=`السلام عليكم ${o.name} 👋\nطلبك من متجرنا:\n${o.product}${o.model?' ('+o.model+')':''} × ${o.qty}\nالمجموع ${o.total} دج شامل التوصيل إلى ${o.wilaya} - ${o.baladiya}.\n\nللتأكيد أرسل: 1 ✅\nللإلغاء أرسل: 2 ❌`;window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(m),'_blank');upd(id,{status:'msg_sent',last_call_at:now})}
+ if(k==='call'){upd(id,{status:'called',call_count:(o.call_count||0)+1,last_call_at:now});location.href='tel:'+o.phone}
+ if(k==='na')upd(id,{status:'no_answer',no_answer_count:(o.no_answer_count||0)+1,last_call_at:now});
+ if(k==='ok')upd(id,{status:'confirmed'});
+ if(k==='no')upd(id,{status:'canceled'});
+ if(k==='del'&&confirm('نقل هذا الطلب إلى الطلبات المحذوفة؟'))upd(id,{deleted_at:now,status:'canceled'})}
+function card(o){
+ const same=byPhone(o.phone).filter(x=>x.id!==o.id),prev=same.filter(x=>(x.call_count||0)>0||x.status==='confirmed'||x.status==='msg_sent');
+ const last=prev.map(x=>x.last_call_at).filter(Boolean).sort().pop();
+ return `<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(o.name)}</b><span class="b ${o.status}">${ST[o.status]||o.status}</span></div>
+ <div class="row"><a href="tel:${esc(o.phone)}" style="color:inherit;font-weight:700" dir="ltr">${esc(o.phone)}</a><span class="m">${esc(o.wilaya)} — ${esc(o.baladiya)}</span></div>
+ <div>${esc(o.product)}${o.model?' <small>('+esc(o.model)+')</small>':''} × ${o.qty} — <b>${o.total} دج</b> <small>(${esc(o.delivery_type)}: ${o.delivery_fee} دج)</small></div>
+ <small>${fd(o.created_at)}${o.call_count?` • اتصلت ${o.call_count} مرة (آخرها ${fd(o.last_call_at)})`:''}${o.no_answer_count?` • لم يرد ${o.no_answer_count}`:''}</small>
+ ${prev.length?`<div class="warn">⚠️ سبق التواصل مع هذا الرقم في طلب آخر${last?' ('+fd(last)+')':''} — لا تتصل مرة ثانية إلا للضرورة.</div>`:same.length?`<div class="warn" style="background:#dbeafe;color:#1d4ed8">ℹ️ هذا الزبون لديه ${same.length+1} طلبات — اتصل مرة واحدة فقط.</div>`:''}
+ <div class="row" style="margin-top:8px"><button class="p" onclick="act('${o.id}','wa')">📲 رسالة تأكيد واتساب</button><button onclick="act('${o.id}','call')">📞 اتصل</button><button onclick="act('${o.id}','na')">📵 لم يرد</button><button onclick="act('${o.id}','ok')">✔️ مؤكد</button><button onclick="act('${o.id}','no')">❌ ملغي</button><button onclick="act('${o.id}','del')">🗑️ حذف</button></div></div>`}
+function draw(){
+ const ls=O.filter(o=>!o.deleted_at&&(flt==='all'||o.status===flt)&&(!qs||(o.name+o.phone+o.wilaya).toLowerCase().includes(qs.toLowerCase())));
+ let body;
+ if(tab==='o')body=ls.map(card).join('')||'<p class="m">لا توجد طلبات.</p>';
+ else if(tab==='d')body=trash();
+ else{const g={};O.filter(o=>!o.deleted_at).forEach(o=>{(g[o.phone]=g[o.phone]||[]).push(o)});
+  body=Object.entries(g).filter(([p,a])=>!qs||(a[0].name+p).includes(qs)).map(([p,a])=>{const c=a.reduce((s,o)=>s+(o.call_count||0),0),n=a.reduce((s,o)=>s+(o.no_answer_count||0),0);
+   return `<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(a[0].name)}</b><a class="t" href="tel:${esc(p)}">📞 ${esc(p)}</a></div><small>${a.length} طلب • اتصالات: ${c} • لم يرد: ${n} • آخر حالة: ${ST[a[0].status]}</small></div>`}).join('')}
+ const cnt=s=>O.filter(o=>!o.deleted_at&&o.status===s).length;
+ app.innerHTML=`<div class="row" style="justify-content:space-between"><h2>📋 لوحة الطلبات</h2><span><button onclick="diag()">🔧 تشخيص</button> <button onclick="out()">خروج</button></span></div>
+ <p class="m">جديد: ${cnt('new')} • بانتظار الرد: ${cnt('msg_sent')} • لم يرد: ${cnt('no_answer')} • مؤكد: ${cnt('confirmed')} • الإجمالي: ${O.filter(o=>!o.deleted_at).length}</p>
+ ${DG?`<pre class="card" style="white-space:pre-wrap;font:13px/1.7 Tahoma">${esc(DG)}</pre>`:''}<div class="row tabs" style="margin:8px 0"><button class="${tab==='o'?'on':''}" onclick="tab='o';draw()">الطلبات</button><button class="${tab==='c'?'on':''}" onclick="tab='c';draw()">الزبائن</button><button class="${tab==='d'?'on':''}" onclick="tab='d';draw()">🗑️ المحذوفة (${O.filter(o=>o.deleted_at).length})</button>
+ <select onchange="flt=this.value;draw()">${[['all','الكل'],...Object.entries(ST)].map(([k,v])=>`<option value="${k}" ${flt===k?'selected':''}>${v}</option>`).join('')}</select>
+ <input placeholder="بحث بالاسم أو الهاتف" value="${esc(qs)}" oninput="qs=this.value;clearTimeout(window.tt);window.tt=setTimeout(draw,300)" style="flex:1"></div>${body}`;
+ const s=document.querySelector('input[placeholder^="بحث"]');if(s&&qs){s.focus();s.setSelectionRange(qs.length,qs.length)}}
+function trash(){return O.filter(o=>o.deleted_at).map(o=>`<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(o.name)}</b><span class="b canceled">🗑️ طلب محذوف</span></div><div class="row"><span dir="ltr">${esc(o.phone)}</span><span class="m">${esc(o.wilaya)}</span></div><div>${esc(o.product)}${o.model?' <small>('+esc(o.model)+')</small>':''} × ${o.qty} — <b>${o.total} دج</b></div><small>حُذف بتاريخ ${fd(o.deleted_at)}</small><div class="row" style="margin-top:8px"><button onclick="upd('${o.id}',{deleted_at:null})">↩️ استرجاع</button><button onclick="kill('${o.id}')">❌ حذف نهائي</button></div></div>`).join('')||'<p class="m">لا توجد طلبات محذوفة.</p>'}
+async function kill(id){if(!confirm('الحذف النهائي لا يمكن التراجع عنه. متأكد؟'))return;const r=await fetch(SB_URL+'/rest/v1/orders?id=eq.'+id,{method:'DELETE',headers:H()});if(!r.ok)return alert('تعذّر الحذف النهائي — فعّل صلاحية الحذف في Supabase (أمر grant delete)');O=O.filter(o=>o.id!==id);draw()}
+async function diag(){
+ let em='?';try{em=JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email}catch(e){}
+ const L=['بريد الدخول: '+em];
+ try{let r=await fetch(SB_URL+'/rest/v1/orders',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({name:'TEST اختبار',phone:'0550000000',wilaya:'-',baladiya:'-',delivery_type:'-',product:'اختبار',qty:1,unit_price:0,delivery_fee:0,total:0})});
+  const ins=r.ok;L.push('1) حفظ طلب تجريبي من المتجر: '+(ins?'✅ نجح':'❌ فشل '+r.status+' '+(await r.text()).slice(0,160)));
+  r=await fetch(SB_URL+'/rest/v1/orders?select=id',{headers:H()});const j=r.ok?await r.json():[];
+  L.push('2) قراءة الطلبات في اللوحة: '+(r.ok?'✅ عدد الطلبات '+j.length:'❌ فشل '+r.status));
+  if(!ins)L.push('الحل: شغّل أوامر grant وpolicy "public can order" في SQL Editor.');
+  else if(!r.ok||!j.length)L.push('الحل: الحفظ ناجح لكن القراءة ممنوعة. شغّل سياسة "owner only" في SQL Editor، وتأكد أن بريدك أعلاه هو نفس البريد فيها.');
+  else L.push('كل شيء سليم ✅ احذف طلب TEST من القائمة.')}catch(e){L.push('تعذّر الاتصال: '+e)}
+ DG=L.join('\n');await load()}
+function out(){tok='';try{sessionStorage.removeItem('t')}catch(e){};login()}
+tok?load():login();
+</script>
+</body>
+</html>
